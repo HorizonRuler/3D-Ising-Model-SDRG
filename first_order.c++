@@ -14,15 +14,24 @@ struct Parameter {
     double strength;
     Parameter (int id, double strength) : id(id), strength(strength) {}
 };
+struct Node : Parameter {
+    Node (int id, double strength) : Parameter(id, strength) {}
+};
+
+struct Edge : Parameter {
+    int node1;
+    int node2;
+    Edge (int id, double strength, int node1, int node2) : Parameter(id, strength), node1(node1), node2(node2) {}
+};
 
 struct CompareParameters {
-    bool operator()(Parameter const& n1, Parameter const& n2) {
-        return n1.strength < n2.strength;
+    bool operator()(Parameter const& p1, Parameter const& p2) {
+        return p1.strength < p2.strength;
     }
 };
 
-priority_queue<Parameter*, vector<Parameter*>, CompareParameters> Nodes;
-priority_queue<Parameter*, vector<Parameter*>, CompareParameters> Edges;
+priority_queue<Node*, vector<Node*>, CompareParameters> Nodes;
+priority_queue<Edge*, vector<Edge*>, CompareParameters> Edges;
 
 int main() {
 	// generate the network randomly using 
