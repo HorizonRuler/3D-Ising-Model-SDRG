@@ -53,16 +53,15 @@ int main() {
             }
         }
     }
-    // run the first order rules
+    
     while(!Parameters.empty()) {
-        // find the largest field
-        Parameter largest = Parameters.top();
-        if (largest.type == "Node") {
+        // run the first order rules
+        if (Parameters.top().type == "Node") {
             // node decimation rules and print to file
             
         } else {
             // edge decimation rules 
-
+            
         }
         // might need to be careful about if only 2 nodes are left
     }
