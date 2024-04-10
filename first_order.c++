@@ -9,15 +9,16 @@ const int LONGITUDINAL_FIELD_STRENGTH = 0;
 const int TRANSVERSE_FIELD_STANDARD_DEVIATION = 1;
 
 struct Parameter {
+    string type;
     int x1;
     int y1;
     int z1;
     double strength;
-    Parameter (int x1, int y1, int z1, double strength) : x1(x1), y1(y1), z1(z1), strength(strength) {}
+    Parameter (string type, int x1, int y1, int z1, double strength) : type(type), x1(x1), y1(y1), z1(z1), strength(strength) {}
 };
 
 struct Node : Parameter {
-    Node (int x1, int y1, int z1, double strength) : Parameter(x1, y1, z1, strength) {}
+    Node (int x1, int y1, int z1, double strength) : Parameter("Node", x1, y1, z1, strength) {}
 };
 
 struct Edge : Parameter {
@@ -25,7 +26,7 @@ struct Edge : Parameter {
     int y2;
     int z2;
     Edge (int x1, int y1, int z1, double strength, int x2, int y2, int z2) : 
-        Parameter(x1, y1, z1, strength), x2(x2), y2(y2), z2(z2) {}
+        Parameter("Edge", x1, y1, z1, strength), x2(x2), y2(y2), z2(z2) {}
 };
 
 struct CompareParameters {
@@ -47,11 +48,8 @@ int main() {
             for (int k = 0; k < LATTICE_SIDE_LENGTH; k++) {
                 Parameters.push(Node(i, j, k, distribution(generator)));
                 Parameters.push(Edge(i, j, k, COUPLING_STRENGTH, i, j, (k + 1) % LATTICE_SIDE_LENGTH));
-                Parameters.push(Edge(i, j, k, COUPLING_STRENGTH, i, j, (k - 1 + LATTICE_SIDE_LENGTH) % LATTICE_SIDE_LENGTH));
                 Parameters.push(Edge(i, j, k, COUPLING_STRENGTH, i, (j + 1) % LATTICE_SIDE_LENGTH, k));
-                Parameters.push(Edge(i, j, k, COUPLING_STRENGTH, i, (j - 1 + LATTICE_SIDE_LENGTH) % LATTICE_SIDE_LENGTH, k));
                 Parameters.push(Edge(i, j, k, COUPLING_STRENGTH, (i + 1) % LATTICE_SIDE_LENGTH, j, k));
-                Parameters.push(Edge(i, j, k, COUPLING_STRENGTH, (i - 1 + LATTICE_SIDE_LENGTH) % LATTICE_SIDE_LENGTH, j, k));
             }
         }
     }
@@ -59,7 +57,7 @@ int main() {
     while(!Parameters.empty()) {
         // find the largest field
         Parameter largest = Parameters.top();
-        if (is_class<Node>(largest)) {
+        if (largest.type == "Node") {
             // node decimation rules and print to file
             
         } else {
