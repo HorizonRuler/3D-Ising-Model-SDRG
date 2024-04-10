@@ -10,18 +10,22 @@ const int LONGITUDINAL_FIELD_STRENGTH = 0;
 const int TRANSVERSE_FIELD_STANDARD_DEVIATION = 1;
 
 struct Parameter {
-    int id;
+    int x1;
+    int y1;
+    int z1;
     double strength;
-    Parameter (int id, double strength) : id(id), strength(strength) {}
+    Parameter (int x1, int y1, int z1, double strength) : x1(x1), y1(y1), z1(z1), strength(strength) {}
 };
 struct Node : Parameter {
-    Node (int id, double strength) : Parameter(id, strength) {}
+    Node (int x1, int y1, int z1, double strength) : Parameter(x1, y1, z1, strength) {}
 };
 
 struct Edge : Parameter {
-    int node1;
-    int node2;
-    Edge (int id, double strength, int node1, int node2) : Parameter(id, strength), node1(node1), node2(node2) {}
+    int x2;
+    int y2;
+    int z2;
+    Edge (int x1, int y1, int z1, double strength, int x2, int y2, int z2) : 
+        Parameter(x1, y1, z1, strength), x2(x2), y2(y2), z2(z2) {}
 };
 
 struct CompareParameters {
@@ -42,8 +46,13 @@ int main() {
     for (int i = 0; i < LATTICE_SIDE_LENGTH; i++) {
         for (int j = 0; j < LATTICE_SIDE_LENGTH; j++) {
             for (int k = 0; k < LATTICE_SIDE_LENGTH; k++) {
-                // TODO: figure out how to add neighbors, need way to have unique id for each node
-                Nodes.push(Node(i + j + k, distribution(generator)));
+                Nodes.push(Node(i, j, k, distribution(generator)));
+                Edges.push(Edge(i, j, k, COUPLING_STRENGTH, i, j, (k + 1) % LATTICE_SIDE_LENGTH));
+                Edges.push(Edge(i, j, k, COUPLING_STRENGTH, i, j, (k - 1 + LATTICE_SIDE_LENGTH) % LATTICE_SIDE_LENGTH));
+                Edges.push(Edge(i, j, k, COUPLING_STRENGTH, i, (j + 1) % LATTICE_SIDE_LENGTH, k));
+                Edges.push(Edge(i, j, k, COUPLING_STRENGTH, i, (j - 1 + LATTICE_SIDE_LENGTH) % LATTICE_SIDE_LENGTH, k));
+                Edges.push(Edge(i, j, k, COUPLING_STRENGTH, (i + 1) % LATTICE_SIDE_LENGTH, j, k));
+                Edges.push(Edge(i, j, k, COUPLING_STRENGTH, (i - 1 + LATTICE_SIDE_LENGTH) % LATTICE_SIDE_LENGTH, j, k));
             }
         }
     }
