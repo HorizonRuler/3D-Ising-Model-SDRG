@@ -30,8 +30,8 @@ struct CompareParameters {
     }
 };
 
-priority_queue<Node*, vector<Node*>, CompareParameters> Nodes;
-priority_queue<Edge*, vector<Edge*>, CompareParameters> Edges;
+priority_queue<Node, vector<Node>, CompareParameters> Nodes;
+priority_queue<Edge, vector<Edge>, CompareParameters> Edges;
 
 int main() {
 	// generate the network randomly using 
@@ -43,12 +43,7 @@ int main() {
         for (int j = 0; j < LATTICE_SIDE_LENGTH; j++) {
             for (int k = 0; k < LATTICE_SIDE_LENGTH; k++) {
                 // TODO: figure out how to add neighbors, need way to have unique id for each node
-                Nodes.push(Parameter(i + j + k, 
-                                distribution(generator), 
-                                vector<Parameter*> ((i + j + k + 1) % (LATTICE_SIDE_LENGTH * 3 - 2), 
-                                                (i + j + k - 1) % LATTICE_SIDE_LENGTH, 
-                                                (i + j + k + 1) % LATTICE_SIDE_LENGTH, 
-                                                (i + j + k + 1) % LATTICE_SIDE_LENGTH)));
+                Nodes.push(Node(i + j + k, distribution(generator)));
             }
         }
     }
