@@ -4,6 +4,10 @@
         "chrono": "cpp",
         "tuple": "cpp",
         "vector": "cpp",
-        "queue": "cpp"
+        "queue": "cpp",
+        "map": "cpp",
+        "optional": "cpp",
+        "unordered_map": "cpp",
+        "variant": "cpp"
     }
 }

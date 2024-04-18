@@ -1,7 +1,7 @@
 #include <iostream>
 #include <random>
 #include <chrono>
-#include <queue>
+#include <map>
 using namespace std;
 const int LATTICE_SIDE_LENGTH = 128;
 const int COUPLING_STRENGTH = 1;
@@ -13,29 +13,22 @@ struct Parameter {
     int x1;
     int y1;
     int z1;
-    double strength;
-    Parameter (string type, int x1, int y1, int z1, double strength) : type(type), x1(x1), y1(y1), z1(z1), strength(strength) {}
+    Parameter (string type, int x1, int y1, int z1) : type(type), x1(x1), y1(y1), z1(z1) {}
 };
 
 struct Node : Parameter {
-    Node (int x1, int y1, int z1, double strength) : Parameter("Node", x1, y1, z1, strength) {}
+    Node (int x1, int y1, int z1) : Parameter("Node", x1, y1, z1) {}
 };
 
 struct Edge : Parameter {
     int x2;
     int y2;
     int z2;
-    Edge (int x1, int y1, int z1, double strength, int x2, int y2, int z2) : 
-        Parameter("Edge", x1, y1, z1, strength), x2(x2), y2(y2), z2(z2) {}
+    Edge (int x1, int y1, int z1, int x2, int y2, int z2) : 
+        Parameter("Edge", x1, y1, z1), x2(x2), y2(y2), z2(z2) {}
 };
 
-struct CompareParameters {
-    bool operator()(Parameter const& p1, Parameter const& p2) {
-        return p1.strength < p2.strength;
-    }
-};
-
-priority_queue<Parameter, vector<Parameter>, CompareParameters> Parameters;
+multimap<double, Parameter> Parameters;
 
 int main() {
 	// generate the network randomly using 
@@ -46,17 +39,17 @@ int main() {
     for (int i = 0; i < LATTICE_SIDE_LENGTH; i++) {
         for (int j = 0; j < LATTICE_SIDE_LENGTH; j++) {
             for (int k = 0; k < LATTICE_SIDE_LENGTH; k++) {
-                Parameters.push(Node(i, j, k, distribution(generator)));
-                Parameters.push(Edge(i, j, k, COUPLING_STRENGTH, i, j, (k + 1) % LATTICE_SIDE_LENGTH));
-                Parameters.push(Edge(i, j, k, COUPLING_STRENGTH, i, (j + 1) % LATTICE_SIDE_LENGTH, k));
-                Parameters.push(Edge(i, j, k, COUPLING_STRENGTH, (i + 1) % LATTICE_SIDE_LENGTH, j, k));
+                Parameters.emplace(distribution(generator), Node(i, j, k));
+                Parameters.emplace(COUPLING_STRENGTH, Edge(i, j, k, i, j, (k + 1) % LATTICE_SIDE_LENGTH));
+                Parameters.emplace(COUPLING_STRENGTH, Edge(i, j, k, i, (j + 1) % LATTICE_SIDE_LENGTH, k));
+                Parameters.emplace(COUPLING_STRENGTH, Edge(i, j, k, (i + 1) % LATTICE_SIDE_LENGTH, j, k));
             }
         }
     }
     
     while(!Parameters.empty()) {
         // run the first order rules
-        if (Parameters.top().type == "Node") {
+        if (Parameters.crbegin()->second.type == "Node") {
             // node decimation rules and print to file
             
         } else {
