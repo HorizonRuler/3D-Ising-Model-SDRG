@@ -44,7 +44,7 @@ int main() {
                 Parameters.emplace(COUPLING_STRENGTH, Edge(i, j, k, i, (j + 1) % LATTICE_SIDE_LENGTH, k));
                 Parameters.emplace(COUPLING_STRENGTH, Edge(i, j, k, (i + 1) % LATTICE_SIDE_LENGTH, j, k));
             }
-        }
+        };
     }
     
     while(!Parameters.empty()) {
