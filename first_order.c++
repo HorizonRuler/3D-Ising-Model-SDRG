@@ -1,7 +1,9 @@
-#include <iostream>
+#include <fstream>
 #include <random>
 #include <chrono>
-#include <map>
+#include <queue>
+#include <vector>
+#include <utility>
 using namespace std;
 const int LATTICE_SIDE_LENGTH = 128;
 const int COUPLING_STRENGTH = 1;
@@ -9,26 +11,29 @@ const int LONGITUDINAL_FIELD_STRENGTH = 0;
 const int TRANSVERSE_FIELD_STANDARD_DEVIATION = 1;
 
 struct Parameter {
-    string type;
     int x1;
     int y1;
     int z1;
-    Parameter (string type, int x1, int y1, int z1) : type(type), x1(x1), y1(y1), z1(z1) {}
+    double strength;
+    string type;
+    bool valid = true;
+    Parameter (double strength, string type, int x1, int y1, int z1) : strength(strength), type(type), x1(x1), y1(y1), z1(z1) {}
 };
 
 struct Node : Parameter {
-    Node (int x1, int y1, int z1) : Parameter("Node", x1, y1, z1) {}
+    Node (double strength, int x1, int y1, int z1) : Parameter(strength, "Node", x1, y1, z1) {}
 };
 
 struct Edge : Parameter {
     int x2;
     int y2;
     int z2;
-    Edge (int x1, int y1, int z1, int x2, int y2, int z2) : 
-        Parameter("Edge", x1, y1, z1), x2(x2), y2(y2), z2(z2) {}
+    Edge (double strength, int x1, int y1, int z1, int x2, int y2, int z2) : Parameter(strength, "Edge", x1, y1, z1), x2(x2), y2(y2), z2(z2) {}
 };
 
-multimap<double, Parameter> Parameters;
+// 3D adjacency list of vertices pointing to nodes and edges in priority queue
+pair<Parameter*, vector<Parameter*>> adjacency_list[LATTICE_SIDE_LENGTH][LATTICE_SIDE_LENGTH][LATTICE_SIDE_LENGTH];
+priority_queue<Parameter> Parameters;
 
 int main() {
 	// generate the network randomly using 
@@ -39,17 +44,28 @@ int main() {
     for (int i = 0; i < LATTICE_SIDE_LENGTH; i++) {
         for (int j = 0; j < LATTICE_SIDE_LENGTH; j++) {
             for (int k = 0; k < LATTICE_SIDE_LENGTH; k++) {
-                Parameters.emplace(distribution(generator), Node(i, j, k));
-                Parameters.emplace(COUPLING_STRENGTH, Edge(i, j, k, i, j, (k + 1) % LATTICE_SIDE_LENGTH));
-                Parameters.emplace(COUPLING_STRENGTH, Edge(i, j, k, i, (j + 1) % LATTICE_SIDE_LENGTH, k));
-                Parameters.emplace(COUPLING_STRENGTH, Edge(i, j, k, (i + 1) % LATTICE_SIDE_LENGTH, j, k));
+                Node n = Node(distribution(generator), i, j, k);
+                Edge e1 = Edge(COUPLING_STRENGTH, i, j, k, i, j, (k + 1) % LATTICE_SIDE_LENGTH);
+                Edge e2 = Edge(COUPLING_STRENGTH, i, j, k, i, (j + 1) % LATTICE_SIDE_LENGTH, k);
+                Edge e3 = Edge(COUPLING_STRENGTH, i, j, k, (i + 1) % LATTICE_SIDE_LENGTH, j, k);
+                Parameters.push(n);
+                Parameters.push(e1);
+                Parameters.push(e2);
+                Parameters.push(e3);
+                adjacency_list[i][j][k].first = &n;
+                adjacency_list[i][j][k].second.push_back(&e1);
+                adjacency_list[i][j][k].second.push_back(&e2);
+                adjacency_list[i][j][k].second.push_back(&e3);
+                adjacency_list[i][j][(k + 1) % LATTICE_SIDE_LENGTH].second.push_back(&e1);
+                adjacency_list[i][(j + 1) % LATTICE_SIDE_LENGTH][k].second.push_back(&e2);
+                adjacency_list[(i + 1) % LATTICE_SIDE_LENGTH][j][k].second.push_back(&e3);
             }
         };
     }
     
     while(!Parameters.empty()) {
         // run the first order rules
-        if (Parameters.crbegin()->second.type == "Node") {
+        if (Parameters.top().type == "Node") {
             // node decimation rules and print to file
             
         } else {
