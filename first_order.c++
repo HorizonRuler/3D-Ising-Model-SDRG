@@ -6,7 +6,7 @@
 #include <utility>
 #include <cstdio>
 using namespace std;
-const int LATTICE_SIDE_LENGTH = 3;
+const int LATTICE_SIDE_LENGTH = 2;
 const int COUPLING_STRENGTH = 1;
 const int LONGITUDINAL_FIELD_STRENGTH = 0;
 const int TRANSVERSE_FIELD_STANDARD_DEVIATION = 1;
@@ -77,13 +77,13 @@ int main() {
         if (Parameters.top().valid != false) {
             if (Parameters.top().type == "Node") {
                 // node decimation and print to file
-                fprintf(output_file, "Node: (%d, %d, %d)\n", Parameters.top().x1, Parameters.top().y1, Parameters.top().z1);
+                fprintf(output_file, "Node %f: (%d, %d, %d)\n", Parameters.top().strength, Parameters.top().x1, Parameters.top().y1, Parameters.top().z1);
 
                 for (Edge* p : adjacency_list[Parameters.top().x1][Parameters.top().y1][Parameters.top().z1].second) {
                     // increment neighboring node strengths by connected edge strengths
                     if (p->x1 == Parameters.top().x1 && p->y1 == Parameters.top().y1 && p->z1 == Parameters.top().z1) {
                         adjacency_list[p->x2][p->y2][p->z2].first->strength += p->strength;
-                    } else if (p->x2 == Parameters.top().x1 && p->y2 == Parameters.top().y1 && p->z2 == Parameters.top().z1) {
+                    } else {
                         adjacency_list[p->x1][p->y1][p->z1].first->strength += p->strength;
                     }
 
@@ -94,7 +94,7 @@ int main() {
             } else {
                 // edge decimation and print to file
                 Edge *e = (Edge*) &Parameters.top();
-                fprintf(output_file, "Edge: (%d, %d, %d) <-> (%d, %d, %d)\n", e->x1, e->y1, e->z1, e->x2, e->y2, e->z2);
+                fprintf(output_file, "Edge %f: (%d, %d, %d) <-> (%d, %d, %d)\n", e->strength, e->x1, e->y1, e->z1, e->x2, e->y2, e->z2);
 
                 // combine the nodes, keeping 1st node and invalidating 2nd node
                 adjacency_list[e->x1][e->y1][e->z1].first->strength += adjacency_list[e->x2][e->y2][e->z2].first->strength;
@@ -116,7 +116,7 @@ int main() {
                         p->x1 = e->x1;
                         p->y1 = e->y1;
                         p->z1 = e->z1;
-                    } else if (p->x2 == e->x2 && p->y2 == e->y2 && p->z2 == e->z2) {
+                    } else {
                         p->x2 = e->x1;
                         p->y2 = e->y1;
                         p->z2 = e->z1;
