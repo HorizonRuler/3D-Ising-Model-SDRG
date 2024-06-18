@@ -89,19 +89,20 @@ int main() {
                 // node decimation, print to file
                 fprintf(output_file, "Node strength %f: (%d, %d, %d)\n", Parameters.top()->strength, Parameters.top()->x1, Parameters.top()->y1, Parameters.top()->z1);
 
+                vector<Node*> nodes_to_copy;
                 for (Edge* p : adjacency_list[Parameters.top()->x1][Parameters.top()->y1][Parameters.top()->z1].second) {
                     // increment neighboring node strengths by connected edge strengths and maintain heap by pushing new node to priority queue and invalidating old ones
                     if (p->x1 == Parameters.top()->x1 && p->y1 == Parameters.top()->y1 && p->z1 == Parameters.top()->z1) {
                         Node *n = new Node(adjacency_list[p->x2][p->y2][p->z2].first->strength + p->strength, p->x2, p->y2, p->z2);
                         adjacency_list[p->x2][p->y2][p->z2].first->valid = false;
                         adjacency_list[p->x2][p->y2][p->z2].first = n;
-                        Parameters.push(n);
+                        nodes_to_copy.push_back(n);
                         adjacency_list[p->x2][p->y2][p->z2].second.erase(p);
                     } else {
                         Node *n = new Node(adjacency_list[p->x1][p->y1][p->z1].first->strength + p->strength, p->x1, p->y1, p->z1);
                         adjacency_list[p->x1][p->y1][p->z1].first->valid = false;
                         adjacency_list[p->x1][p->y1][p->z1].first = n;
-                        Parameters.push(n);
+                        nodes_to_copy.push_back(n);
                         adjacency_list[p->x1][p->y1][p->z1].second.erase(p);
                     }
 
@@ -111,6 +112,10 @@ int main() {
 
                 // remove node and associated from adjacency list, will be popped immediately from priority queue so no need to invalidate
                 adjacency_list[Parameters.top()->x1][Parameters.top()->y1][Parameters.top()->z1].second.clear();adjacency_list[Parameters.top()->x1][Parameters.top()->y1][Parameters.top()->z1].first = nullptr;
+
+                // update priority queue after all done
+                for (Node* n : nodes_to_copy)
+                    Parameters.push(n);
             } else {
                 // edge decimation, print to file
                 Edge *e = (Edge*) Parameters.top();
@@ -120,13 +125,13 @@ int main() {
                 Node *n = new Node(adjacency_list[e->x1][e->y1][e->z1].first->strength + adjacency_list[e->x2][e->y2][e->z2].first->strength, e->x1, e->y1, e->z1);
                 Parameters.push(n);
 
-                // update 1 adjacency list to point to new node and other to null
-                adjacency_list[e->x1][e->y1][e->z1].first = n;
-                adjacency_list[e->x2][e->y2][e->z2].first = nullptr;
-
                 // invalidate 1st and 2nd node
                 adjacency_list[e->x1][e->y1][e->z1].first->valid = false;
                 adjacency_list[e->x2][e->y2][e->z2].first->valid = false;
+
+                // update 1 adjacency list to point to new node and other to null
+                adjacency_list[e->x1][e->y1][e->z1].first = n;
+                adjacency_list[e->x2][e->y2][e->z2].first = nullptr;
 
                 // remove connecting edge from adjacency list, will be popped immediately from priority queue so no need to invalidate
                 adjacency_list[e->x1][e->y1][e->z1].second.erase(e);
@@ -138,8 +143,7 @@ int main() {
                     bool overlap = false;
                     for (Edge* q : adjacency_list[e->x1][e->y1][e->z1].second) {
                         if (p->x1 == q->x1 && p->y1 == q->y1 && p->z1 == q->z1 || p->x1 == q->x2 && p->y1 == q->y2 && p->z1 == q->z2 || p->x2 == q->x1 && p->y2 == q->y1 && p->z2 == q->z1 || p->x2 == q->x2 && p->y2 == q->y2 && p->z2 == q->z2) {
-                            // maximum rule for overlapping edges
-                            q->strength = max(q->strength, p->strength);
+                            // maximum rule for overlapping edges (doesn't matter because both are 1 for now)
                             p->valid = false;
                             overlap = true;
                             if (p->x1 == e->x2 && p->y1 == e->y2 && p->z1 == e->z2)
@@ -149,7 +153,8 @@ int main() {
                             break;
                         }
                     }
-                    if (overlap) continue;
+                    if (overlap) 
+                        continue;
 
                     // move over non-overlapping edges
                     if (p->x1 == e->x2 && p->y1 == e->y2 && p->z1 == e->z2) {
@@ -164,10 +169,14 @@ int main() {
                     edges_to_copy.push_back(p);
                 }
                 adjacency_list[e->x2][e->y2][e->z2].second.clear();
+
+                // update adjacency list after all done
                 for (Edge* p : edges_to_copy)
                     adjacency_list[e->x1][e->y1][e->z1].second.insert(p);
             }
         }
+
+        // clean up memory and pop
         delete Parameters.top();
         Parameters.pop();
     }
