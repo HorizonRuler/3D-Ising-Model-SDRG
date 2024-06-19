@@ -14,10 +14,10 @@ const int TRANSVERSE_FIELD_MEAN = 0;
 
 // inheritance structure for priority queue
 struct Parameter {
+    double strength;
     int x1;
     int y1;
     int z1;
-    double strength;
     string type;
     bool valid = true;
     Parameter (double strength, string type, int x1, int y1, int z1) : strength(strength), type(type), x1(x1), y1(y1), z1(z1) {}
@@ -43,14 +43,14 @@ struct EdgeHash {
 // 3D adjacency list for each node pointing to nodes and edges in priority queue
 pair<Node*, unordered_set<Edge*, EdgeHash>> adjacency_list[LATTICE_SIDE_LENGTH][LATTICE_SIDE_LENGTH][LATTICE_SIDE_LENGTH];
 auto parameter_compare = [] (Parameter *a, Parameter *b) {return a->strength < b->strength;};
-priority_queue<Parameter*, vector<Parameter*>, decltype(parameter_compare)> Parameters(parameter_compare);
+priority_queue<Parameter*, vector<Parameter*>, decltype(parameter_compare)> parameters(parameter_compare);
 
 int main() {
     // file output
     FILE *output_file = fopen("first_order_output.txt", "w");
 
 	// generate the network randomly using gaussian distribution for fields centered at 0
-    unsigned seed = chrono::system_clock::now().time_since_epoch().count();
+    unsigned seed = 1; // chrono::system_clock::now().time_since_epoch().count();
     default_random_engine generator(seed);
     normal_distribution<double> distribution(TRANSVERSE_FIELD_MEAN, TRANSVERSE_FIELD_STANDARD_DEVIATION);
 
@@ -60,16 +60,16 @@ int main() {
             for (int k = 0; k < LATTICE_SIDE_LENGTH; k++) {
                 // nodes first
                 Node *n = new Node(distribution(generator), i, j, k);
-                Parameters.push(n);
+                parameters.push(n);
                 adjacency_list[i][j][k].first = n;
 
                 // mod to accound for periodic boundary conditions
                 Edge *e1 = new Edge(COUPLING_STRENGTH, i, j, k, i, j, (k + 1) % LATTICE_SIDE_LENGTH);
                 Edge *e2 = new Edge(COUPLING_STRENGTH, i, j, k, i, (j + 1) % LATTICE_SIDE_LENGTH, k);
                 Edge *e3 = new Edge(COUPLING_STRENGTH, i, j, k, (i + 1) % LATTICE_SIDE_LENGTH, j, k);
-                Parameters.push(e1);
-                Parameters.push(e2);
-                Parameters.push(e3);
+                parameters.push(e1);
+                parameters.push(e2);
+                parameters.push(e3);
 
                 // maintain adjacency list with edges in both end nodes
                 adjacency_list[i][j][k].second.insert(e1);
@@ -83,16 +83,16 @@ int main() {
     }
     
     // first order rules
-    while(!Parameters.empty()) {
-        if (Parameters.top()->valid != false) {
-            if (Parameters.top()->type == "Node") {
+    while(!parameters.empty()) {
+        if (parameters.top()->valid != false) {
+            if (parameters.top()->type == "Node") {
                 // node decimation, print to file
-                fprintf(output_file, "Node strength %f: (%d, %d, %d)\n", Parameters.top()->strength, Parameters.top()->x1, Parameters.top()->y1, Parameters.top()->z1);
+                fprintf(output_file, "Node strength %f: (%d, %d, %d)\n", parameters.top()->strength, parameters.top()->x1, parameters.top()->y1, parameters.top()->z1);
 
                 vector<Node*> nodes_to_copy;
-                for (Edge* p : adjacency_list[Parameters.top()->x1][Parameters.top()->y1][Parameters.top()->z1].second) {
+                for (Edge* p : adjacency_list[parameters.top()->x1][parameters.top()->y1][parameters.top()->z1].second) {
                     // increment neighboring node strengths by connected edge strengths and maintain heap by pushing new node to priority queue and invalidating old ones
-                    if (p->x1 == Parameters.top()->x1 && p->y1 == Parameters.top()->y1 && p->z1 == Parameters.top()->z1) {
+                    if (p->x1 == parameters.top()->x1 && p->y1 == parameters.top()->y1 && p->z1 == parameters.top()->z1) {
                         Node *n = new Node(adjacency_list[p->x2][p->y2][p->z2].first->strength + p->strength, p->x2, p->y2, p->z2);
                         adjacency_list[p->x2][p->y2][p->z2].first->valid = false;
                         adjacency_list[p->x2][p->y2][p->z2].first = n;
@@ -111,19 +111,22 @@ int main() {
                 }
 
                 // remove node and associated from adjacency list, will be popped immediately from priority queue so no need to invalidate
-                adjacency_list[Parameters.top()->x1][Parameters.top()->y1][Parameters.top()->z1].second.clear();adjacency_list[Parameters.top()->x1][Parameters.top()->y1][Parameters.top()->z1].first = nullptr;
+                adjacency_list[parameters.top()->x1][parameters.top()->y1][parameters.top()->z1].second.clear();adjacency_list[parameters.top()->x1][parameters.top()->y1][parameters.top()->z1].first = nullptr;
 
-                // update priority queue after all done
+                // clean up memory and pop
+                delete parameters.top();
+                parameters.pop();
+
+                // update priority queue after popping
                 for (Node* n : nodes_to_copy)
-                    Parameters.push(n);
+                    parameters.push(n);
             } else {
                 // edge decimation, print to file
-                Edge *e = (Edge*) Parameters.top();
+                Edge *e = (Edge*) parameters.top();
                 fprintf(output_file, "Edge strength %f: (%d, %d, %d) <-> (%d, %d, %d)\n", e->strength, e->x1, e->y1, e->z1, e->x2, e->y2, e->z2);
 
-                // push new node with combined strength
+                // new node with combined strength
                 Node *n = new Node(adjacency_list[e->x1][e->y1][e->z1].first->strength + adjacency_list[e->x2][e->y2][e->z2].first->strength, e->x1, e->y1, e->z1);
-                Parameters.push(n);
 
                 // invalidate 1st and 2nd node
                 adjacency_list[e->x1][e->y1][e->z1].first->valid = false;
@@ -173,12 +176,19 @@ int main() {
                 // update adjacency list after all done
                 for (Edge* p : edges_to_copy)
                     adjacency_list[e->x1][e->y1][e->z1].second.insert(p);
-            }
-        }
 
-        // clean up memory and pop
-        delete Parameters.top();
-        Parameters.pop();
+                // clean up memory and pop
+                delete parameters.top();
+                parameters.pop();
+
+                // update priority queue after popping
+                parameters.push(n);
+            }
+        } else {
+            // clean up memory and pop
+            delete parameters.top();
+            parameters.pop();
+        }
     }
     fclose(output_file);
     return 0;
