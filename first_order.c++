@@ -93,7 +93,7 @@ int main() {
 
                 vector<Node*> nodes_to_copy;
                 for (Edge* p : adjacency_list[parameters.top()->x1][parameters.top()->y1][parameters.top()->z1].second) {
-                    // increment neighboring node strengths by connected edge strengths and maintain heap by pushing new node to priority queue and invalidating old ones
+                    // increment neighboring node strengths by connected edge strengths and maintain heap by creating new nodes and invalidating old ones
                     if (p->x1 == parameters.top()->x1 && p->y1 == parameters.top()->y1 && p->z1 == parameters.top()->z1) {
                         Node *n = new Node(adjacency_list[p->x2][p->y2][p->z2].first->strength + p->strength, p->x2, p->y2, p->z2);
                         adjacency_list[p->x2][p->y2][p->z2].first->valid = false;
@@ -149,8 +149,10 @@ int main() {
                     for (Edge* q : adjacency_list[e->x1][e->y1][e->z1].second) {
                         if (p->x1 == q->x1 && p->y1 == q->y1 && p->z1 == q->z1 || p->x1 == q->x2 && p->y1 == q->y2 && p->z1 == q->z2 || p->x2 == q->x1 && p->y2 == q->y1 && p->z2 == q->z1 || p->x2 == q->x2 && p->y2 == q->y2 && p->z2 == q->z2) {
                             // maximum rule for overlapping edges (doesn't matter because both are 1 for now)
-                            p->valid = false;
                             overlap = true;
+
+                            // get rid of one of the edges
+                            p->valid = false;
                             if (p->x1 == e->x2 && p->y1 == e->y2 && p->z1 == e->z2)
                                 adjacency_list[p->x2][p->y2][p->z2].second.erase(p);
                             else 
@@ -158,6 +160,8 @@ int main() {
                             break;
                         }
                     }
+
+                    // skip moving if overlapping
                     if (overlap) 
                         continue;
 
@@ -173,9 +177,11 @@ int main() {
                     }
                     edges_to_copy.push_back(p);
                 }
+
+                // remove all edges from 2nd node
                 adjacency_list[e->x2][e->y2][e->z2].second.clear();
 
-                // update adjacency list after all done
+                // update 1st adjacency list after all done
                 for (Edge* p : edges_to_copy)
                     adjacency_list[e->x1][e->y1][e->z1].second.insert(p);
 
