@@ -9,6 +9,8 @@
         "optional": "cpp",
         "unordered_map": "cpp",
         "variant": "cpp",
-        "numbers": "cpp"
+        "numbers": "cpp",
+        "__hash_table": "cpp",
+        "unordered_set": "cpp"
     }
 }

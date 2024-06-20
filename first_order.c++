@@ -9,7 +9,7 @@ using namespace std;
 const int LATTICE_SIDE_LENGTH = 3;
 const int COUPLING_STRENGTH = 1;
 const int LONGITUDINAL_FIELD_STRENGTH = 0;
-const int TRANSVERSE_FIELD_STANDARD_DEVIATION = 1;
+const double TRANSVERSE_FIELD_STANDARD_DEVIATION = 0.25;
 const int TRANSVERSE_FIELD_MEAN = 0;
 
 // inheritance structure for priority queue
@@ -34,9 +34,11 @@ struct Edge : Parameter {
     Edge (double strength, int x1, int y1, int z1, int x2, int y2, int z2) : Parameter(strength, "Edge", x1, y1, z1), x2(x2), y2(y2), z2(z2) {}
 };
 
+// https://stackoverflow.com/questions/20953390/what-is-the-fastest-hash-function-for-pointers
 struct EdgeHash {
     size_t operator() (const Edge* e) const {
-        return hash<int>()(e->x1) ^ hash<int>()(e->y1) ^ hash<int>()(e->z1) ^ hash<int>()(e->x2) ^ hash<int>()(e->y2) ^ hash<int>()(e->z2);
+        static const size_t shift = (size_t)log2(1 + sizeof(Edge));
+        return (size_t)(e) >> shift;
     }
 };
 
@@ -50,7 +52,7 @@ int main() {
     FILE *output_file = fopen("first_order_output.txt", "w");
 
 	// generate the network randomly using gaussian distribution for fields centered at 0
-    unsigned seed = 1; // chrono::system_clock::now().time_since_epoch().count();
+    unsigned seed = chrono::system_clock::now().time_since_epoch().count();
     default_random_engine generator(seed);
     normal_distribution<double> distribution(TRANSVERSE_FIELD_MEAN, TRANSVERSE_FIELD_STANDARD_DEVIATION);
 
