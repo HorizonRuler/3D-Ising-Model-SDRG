@@ -9,7 +9,7 @@ using namespace std;
 const int LATTICE_SIDE_LENGTH = 3;
 const int COUPLING_STRENGTH = 1;
 const int LONGITUDINAL_FIELD_STRENGTH = 0;
-const double TRANSVERSE_FIELD_STANDARD_DEVIATION = 0.25;
+const double TRANSVERSE_FIELD_STANDARD_DEVIATION = 0.22;
 const int TRANSVERSE_FIELD_MEAN = 0;
 
 // inheritance structure for priority queue
@@ -24,6 +24,7 @@ struct Parameter {
 };
 
 struct Node : Parameter {
+    vector<Node> domain;
     Node (double strength, int x1, int y1, int z1) : Parameter(strength, "Node", x1, y1, z1) {}
 };
 
@@ -49,7 +50,7 @@ priority_queue<Parameter*, vector<Parameter*>, decltype(parameter_compare)> para
 
 int main() {
     // file output
-    FILE *output_file = fopen("first_order_output.txt", "w");
+    FILE *output_file = fopen("first_order_SDRG_output.txt", "w");
 
 	// generate the network randomly using gaussian distribution for fields centered at 0
     unsigned seed = chrono::system_clock::now().time_since_epoch().count();
@@ -90,18 +91,24 @@ int main() {
             if (parameters.top()->type == "Node") {
                 // node decimation, print to file
                 fprintf(output_file, "Node strength %f: (%d, %d, %d)\n", parameters.top()->strength, parameters.top()->x1, parameters.top()->y1, parameters.top()->z1);
+                fprintf(output_file, "Other Original Nodes in domain:\n");
+                for (Node n : ((Node*) parameters.top())->domain)
+                    fprintf(output_file, "(%d, %d, %d)\n", n.x1, n.y1, n.z1);
+                fprintf(output_file, "\n");
 
                 vector<Node*> nodes_to_copy;
                 for (Edge* p : adjacency_list[parameters.top()->x1][parameters.top()->y1][parameters.top()->z1].second) {
                     // increment neighboring node strengths by connected edge strengths and maintain heap by creating new nodes and invalidating old ones
                     if (p->x1 == parameters.top()->x1 && p->y1 == parameters.top()->y1 && p->z1 == parameters.top()->z1) {
                         Node *n = new Node(adjacency_list[p->x2][p->y2][p->z2].first->strength + p->strength, p->x2, p->y2, p->z2);
+                        n->domain = adjacency_list[p->x2][p->y2][p->z2].first->domain;
                         adjacency_list[p->x2][p->y2][p->z2].first->valid = false;
                         adjacency_list[p->x2][p->y2][p->z2].first = n;
                         nodes_to_copy.push_back(n);
                         adjacency_list[p->x2][p->y2][p->z2].second.erase(p);
                     } else {
                         Node *n = new Node(adjacency_list[p->x1][p->y1][p->z1].first->strength + p->strength, p->x1, p->y1, p->z1);
+                        n->domain = adjacency_list[p->x1][p->y1][p->z1].first->domain;
                         adjacency_list[p->x1][p->y1][p->z1].first->valid = false;
                         adjacency_list[p->x1][p->y1][p->z1].first = n;
                         nodes_to_copy.push_back(n);
@@ -129,6 +136,11 @@ int main() {
 
                 // new node with combined strength
                 Node *n = new Node(adjacency_list[e->x1][e->y1][e->z1].first->strength + adjacency_list[e->x2][e->y2][e->z2].first->strength, e->x1, e->y1, e->z1);
+
+                // combine domains for output
+                n->domain = adjacency_list[e->x1][e->y1][e->z1].first->domain;
+                n->domain.insert(n->domain.end(), adjacency_list[e->x2][e->y2][e->z2].first->domain.begin(), adjacency_list[e->x2][e->y2][e->z2].first->domain.end());
+                n->domain.push_back(*adjacency_list[e->x2][e->y2][e->z2].first);
 
                 // invalidate 1st and 2nd node
                 adjacency_list[e->x1][e->y1][e->z1].first->valid = false;
