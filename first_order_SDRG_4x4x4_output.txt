@@ -1,0 +1,174 @@
+Edge strength 1.000000: (0, 0, 0) <-> (0, 0, 1)
+Edge strength 1.000000: (0, 0, 0) <-> (1, 0, 0)
+Edge strength 1.000000: (0, 0, 0) <-> (1, 0, 1)
+Edge strength 1.000000: (0, 0, 3) <-> (1, 0, 3)
+Edge strength 1.000000: (0, 1, 3) <-> (1, 1, 3)
+Edge strength 1.000000: (0, 3, 3) <-> (1, 3, 3)
+Edge strength 1.000000: (0, 3, 3) <-> (2, 3, 3)
+Edge strength 1.000000: (3, 3, 3) <-> (0, 3, 3)
+Edge strength 1.000000: (2, 0, 0) <-> (2, 0, 1)
+Edge strength 1.000000: (2, 0, 0) <-> (2, 1, 0)
+Edge strength 1.000000: (2, 0, 0) <-> (3, 0, 0)
+Edge strength 1.000000: (0, 0, 0) <-> (1, 1, 0)
+Edge strength 1.000000: (2, 0, 0) <-> (2, 0, 2)
+Edge strength 1.000000: (2, 0, 0) <-> (2, 1, 1)
+Edge strength 1.000000: (0, 2, 0) <-> (0, 2, 1)
+Edge strength 1.000000: (0, 0, 0) <-> (2, 0, 0)
+Edge strength 1.000000: (3, 3, 3) <-> (3, 0, 3)
+Edge strength 1.000000: (0, 0, 0) <-> (2, 1, 2)
+Node strength 1.040888: (0, 0, 0)
+Other Original Nodes in domain:
+(0, 0, 1)
+(1, 0, 0)
+(1, 0, 1)
+(1, 1, 0)
+(2, 0, 1)
+(2, 1, 0)
+(3, 0, 0)
+(2, 0, 2)
+(2, 1, 1)
+(2, 0, 0)
+(2, 1, 2)
+
+Node strength 1.664317: (0, 0, 3)
+Other Original Nodes in domain:
+(1, 0, 3)
+
+Node strength 2.400558: (3, 3, 3)
+Other Original Nodes in domain:
+(1, 3, 3)
+(2, 3, 3)
+(0, 3, 3)
+(3, 0, 3)
+
+Node strength 2.836465: (2, 0, 3)
+Other Original Nodes in domain:
+
+Node strength 2.429237: (0, 3, 0)
+Other Original Nodes in domain:
+
+Node strength 3.104700: (3, 3, 0)
+Other Original Nodes in domain:
+
+Node strength 3.163191: (2, 3, 0)
+Other Original Nodes in domain:
+
+Node strength 3.919736: (1, 3, 0)
+Other Original Nodes in domain:
+
+Node strength 2.502269: (1, 2, 0)
+Other Original Nodes in domain:
+
+Node strength 2.986162: (2, 2, 0)
+Other Original Nodes in domain:
+
+Node strength 2.409339: (0, 3, 1)
+Other Original Nodes in domain:
+
+Node strength 3.011630: (1, 3, 1)
+Other Original Nodes in domain:
+
+Node strength 3.181243: (2, 3, 1)
+Other Original Nodes in domain:
+
+Node strength 3.274352: (3, 3, 1)
+Other Original Nodes in domain:
+
+Node strength 3.223542: (2, 3, 2)
+Other Original Nodes in domain:
+
+Node strength 3.238271: (1, 3, 2)
+Other Original Nodes in domain:
+
+Node strength 3.168722: (1, 0, 2)
+Other Original Nodes in domain:
+
+Node strength 3.138712: (0, 3, 2)
+Other Original Nodes in domain:
+
+Node strength 4.125420: (0, 0, 2)
+Other Original Nodes in domain:
+
+Node strength 4.122029: (3, 3, 2)
+Other Original Nodes in domain:
+
+Node strength 4.257071: (3, 0, 2)
+Other Original Nodes in domain:
+
+Node strength 2.895398: (0, 2, 0)
+Other Original Nodes in domain:
+(0, 2, 1)
+
+Node strength 3.169287: (3, 2, 0)
+Other Original Nodes in domain:
+
+Node strength 3.164042: (1, 2, 1)
+Other Original Nodes in domain:
+
+Node strength 3.551132: (2, 2, 1)
+Other Original Nodes in domain:
+
+Node strength 3.792975: (3, 2, 1)
+Other Original Nodes in domain:
+
+Node strength 3.110778: (2, 2, 2)
+Other Original Nodes in domain:
+
+Node strength 3.093030: (2, 2, 3)
+Other Original Nodes in domain:
+
+Node strength 3.279362: (3, 2, 3)
+Other Original Nodes in domain:
+
+Node strength 3.916799: (3, 2, 2)
+Other Original Nodes in domain:
+
+Node strength 3.474120: (3, 1, 2)
+Other Original Nodes in domain:
+
+Node strength 3.277217: (1, 2, 3)
+Other Original Nodes in domain:
+
+Node strength 4.227292: (0, 2, 3)
+Other Original Nodes in domain:
+
+Node strength 3.859430: (0, 2, 2)
+Other Original Nodes in domain:
+
+Node strength 4.615183: (1, 2, 2)
+Other Original Nodes in domain:
+
+Node strength 3.457600: (0, 1, 3)
+Other Original Nodes in domain:
+(1, 1, 3)
+
+Node strength 4.251084: (2, 1, 3)
+Other Original Nodes in domain:
+
+Node strength 4.815489: (3, 1, 3)
+Other Original Nodes in domain:
+
+Node strength 4.119385: (1, 1, 2)
+Other Original Nodes in domain:
+
+Node strength 4.949243: (0, 1, 2)
+Other Original Nodes in domain:
+
+Node strength 3.469201: (0, 1, 1)
+Other Original Nodes in domain:
+
+Node strength 4.085083: (3, 1, 1)
+Other Original Nodes in domain:
+
+Node strength 3.721387: (3, 1, 0)
+Other Original Nodes in domain:
+
+Node strength 4.452986: (0, 1, 0)
+Other Original Nodes in domain:
+
+Node strength 3.678145: (3, 0, 1)
+Other Original Nodes in domain:
+
+Node strength 3.677209: (1, 1, 1)
+Other Original Nodes in domain:
+
