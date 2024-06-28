@@ -5,8 +5,9 @@
 #include <unordered_set>
 #include <utility>
 #include <cstdio>
+#include <math.h>
 using namespace std;
-const int LATTICE_SIDE_LENGTH = 4;
+const int LATTICE_SIDE_LENGTH = 32;
 const int COUPLING_STRENGTH = 1;
 const int LONGITUDINAL_FIELD_STRENGTH = 0;
 const double TRANSVERSE_FIELD_STANDARD_DEVIATION = 1;
@@ -45,7 +46,7 @@ struct EdgeHash {
 
 // 3D adjacency list for each node pointing to nodes and edges in priority queue
 pair<Node*, unordered_set<Edge*, EdgeHash>> adjacency_list[LATTICE_SIDE_LENGTH][LATTICE_SIDE_LENGTH][LATTICE_SIDE_LENGTH];
-auto parameter_compare = [] (Parameter *a, Parameter *b) {return a->strength < b->strength;};
+auto parameter_compare = [] (Parameter *a, Parameter *b) {return fabs(a->strength) < fabs(b->strength);};
 priority_queue<Parameter*, vector<Parameter*>, decltype(parameter_compare)> parameters(parameter_compare);
 
 int main() {
@@ -65,6 +66,7 @@ int main() {
                 Node *n = new Node(distribution(generator), i, j, k);
                 parameters.push(n);
                 adjacency_list[i][j][k].first = n;
+                n->domain.push_back(*n);
 
                 // mod to accound for periodic boundary conditions
                 Edge *e1 = new Edge(COUPLING_STRENGTH, i, j, k, i, j, (k + 1) % LATTICE_SIDE_LENGTH);
@@ -91,9 +93,9 @@ int main() {
             if (parameters.top()->type == "Node") {
                 // node decimation, print to file
                 fprintf(output_file, "Node strength %f: (%d, %d, %d)\n", parameters.top()->strength, parameters.top()->x1, parameters.top()->y1, parameters.top()->z1);
-                fprintf(output_file, "Other Original Nodes in domain:\n");
+                fprintf(output_file, "Original Nodes in domain:\n");
                 for (Node n : ((Node*) parameters.top())->domain)
-                    fprintf(output_file, "(%d, %d, %d)\n", n.x1, n.y1, n.z1);
+                    fprintf(output_file, "Original strength %f: (%d, %d, %d)\n", n.strength, n.x1, n.y1, n.z1);
                 fprintf(output_file, "\n");
 
                 vector<Node*> nodes_to_copy;
@@ -141,7 +143,6 @@ int main() {
                 // combine domains for output
                 n->domain = adjacency_list[e->x1][e->y1][e->z1].first->domain;
                 n->domain.insert(n->domain.end(), adjacency_list[e->x2][e->y2][e->z2].first->domain.begin(), adjacency_list[e->x2][e->y2][e->z2].first->domain.end());
-                n->domain.push_back(*adjacency_list[e->x2][e->y2][e->z2].first);
 
                 // invalidate 1st and 2nd node
                 adjacency_list[e->x1][e->y1][e->z1].first->valid = false;
