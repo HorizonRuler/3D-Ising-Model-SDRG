@@ -10,7 +10,7 @@ using namespace std;
 const int LATTICE_SIDE_LENGTH = 32;
 const int COUPLING_STRENGTH = 1;
 const int LONGITUDINAL_FIELD_STRENGTH = 0;
-const double TRANSVERSE_FIELD_STANDARD_DEVIATION = 1;
+const double TRANSVERSE_FIELD_STANDARD_DEVIATION = 0.01;
 const int TRANSVERSE_FIELD_MEAN = 0;
 
 // inheritance structure for priority queue
@@ -48,10 +48,12 @@ struct EdgeHash {
 pair<Node*, unordered_set<Edge*, EdgeHash>> adjacency_list[LATTICE_SIDE_LENGTH][LATTICE_SIDE_LENGTH][LATTICE_SIDE_LENGTH];
 auto parameter_compare = [] (Parameter *a, Parameter *b) {return fabs(a->strength) < fabs(b->strength);};
 priority_queue<Parameter*, vector<Parameter*>, decltype(parameter_compare)> parameters(parameter_compare);
+double final_domains[LATTICE_SIDE_LENGTH][LATTICE_SIDE_LENGTH][LATTICE_SIDE_LENGTH];
 
 int main() {
     // file output
-    FILE *output_file = fopen("first_order_SDRG_output.txt", "w");
+    FILE *decimation_steps_file = fopen("first_order_SDRG_steps.txt", "w");
+    FILE *final_domains_file = fopen("first_order_SDRG_domains.csv", "w");
 
 	// generate the network randomly using gaussian distribution for fields centered at 0
     unsigned seed = chrono::system_clock::now().time_since_epoch().count();
@@ -92,11 +94,13 @@ int main() {
         if (parameters.top()->valid != false) {
             if (parameters.top()->type == "Node") {
                 // node decimation, print to file
-                fprintf(output_file, "Node strength %f: (%d, %d, %d)\n", parameters.top()->strength, parameters.top()->x1, parameters.top()->y1, parameters.top()->z1);
-                fprintf(output_file, "Original Nodes in domain:\n");
-                for (Node n : ((Node*) parameters.top())->domain)
-                    fprintf(output_file, "Original strength %f: (%d, %d, %d)\n", n.strength, n.x1, n.y1, n.z1);
-                fprintf(output_file, "\n");
+                fprintf(decimation_steps_file, "Node strength %f: (%d, %d, %d)\n", parameters.top()->strength, parameters.top()->x1, parameters.top()->y1, parameters.top()->z1);
+                fprintf(decimation_steps_file, "Original Nodes in domain:\n");
+                for (Node n : ((Node*) parameters.top())->domain) {
+                    fprintf(decimation_steps_file, "Original strength %f: (%d, %d, %d)\n", n.strength, n.x1, n.y1, n.z1);
+                    final_domains[n.x1][n.y1][n.z1] = parameters.top()->strength;
+                }
+                fprintf(decimation_steps_file, "\n");
 
                 vector<Node*> nodes_to_copy;
                 int node_sign = (adjacency_list[parameters.top()->x1][parameters.top()->y1][parameters.top()->z1].first->strength > 0) - (adjacency_list[parameters.top()->x1][parameters.top()->y1][parameters.top()->z1].first->strength < 0);
@@ -135,7 +139,7 @@ int main() {
             } else {
                 // edge decimation, print to file
                 Edge *e = (Edge*) parameters.top();
-                fprintf(output_file, "Edge strength %f: (%d, %d, %d) <-> (%d, %d, %d)\n", e->strength, e->x1, e->y1, e->z1, e->x2, e->y2, e->z2);
+                fprintf(decimation_steps_file, "Edge strength %f: (%d, %d, %d) <-> (%d, %d, %d)\n", e->strength, e->x1, e->y1, e->z1, e->x2, e->y2, e->z2);
 
                 // new node with combined strength
                 Node *n = new Node(adjacency_list[e->x1][e->y1][e->z1].first->strength + adjacency_list[e->x2][e->y2][e->z2].first->strength, e->x1, e->y1, e->z1);
@@ -212,6 +216,20 @@ int main() {
             parameters.pop();
         }
     }
-    fclose(output_file);
+
+    // print final domains to file
+    for (int i = 0; i < LATTICE_SIDE_LENGTH; i++) {
+        for (int j = 0; j < LATTICE_SIDE_LENGTH; j++) {
+            fprintf(final_domains_file, "%f", final_domains[i][j][0]);
+            for (int k = 1; k < LATTICE_SIDE_LENGTH; k++) {
+                fprintf(final_domains_file, ", %f", final_domains[i][j][k]);
+            }
+            fprintf(final_domains_file, "\n");
+        }
+    }
+
+    // close files
+    fclose(final_domains_file);
+    fclose(decimation_steps_file);
     return 0;
 }
