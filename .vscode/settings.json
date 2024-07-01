@@ -12,5 +12,7 @@
         "numbers": "cpp",
         "__hash_table": "cpp",
         "unordered_set": "cpp"
-    }
+    },
+    "python.analysis.typeCheckingMode": "basic",
+    "python.analysis.autoImportCompletions": true
 }
