@@ -19,6 +19,7 @@ neighboring locations with the same value in the 3D array should have the same c
 '''
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.colors as colors
 FILE_NAME = 'first_order_SDRG_domains_L=32_h=5'
 
 # Read data from file
@@ -43,6 +44,8 @@ x, y, z = np.meshgrid(range(L), range(L), range(L))
 # Plot the 3D array
 fig = plt.figure()
 ax = fig.add_subplot(projection='3d')
-ax.scatter(x, y, z, c=data.flatten(), marker='.', cmap='viridis', linewidths=0.001)
+sc = ax.scatter(x, y, z, c=data.flatten(), marker='.', cmap='RdYlGn',
+                norm=colors.CenteredNorm(), linewidths=0.001)
+plt.colorbar(sc)
 plt.savefig(FILE_NAME + '.png')
 plt.show()
