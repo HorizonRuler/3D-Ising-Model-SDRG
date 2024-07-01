@@ -44,8 +44,11 @@ x, y, z = np.meshgrid(range(L), range(L), range(L))
 # Plot the 3D array
 fig = plt.figure()
 ax = fig.add_subplot(projection='3d')
-sc = ax.scatter(x, y, z, c=data.flatten(), marker='.', cmap='RdYlGn',
+sc = ax.scatter(x, y, z, c=data.flatten(), marker='.',
+                cmap=colors.ListedColormap(["gold", "lawngreen"]),
                 norm=colors.CenteredNorm(), linewidths=0.001)
+plt.xlabel('x')
+plt.ylabel('y')
 plt.colorbar(sc)
 plt.savefig(FILE_NAME + '.png')
 plt.show()
