@@ -45,7 +45,7 @@ x, y, z = np.meshgrid(range(L), range(L), range(L))
 fig = plt.figure()
 ax = fig.add_subplot(projection='3d')
 sc = ax.scatter(x, y, z, c=data.flatten(), marker='.',
-                cmap=colors.ListedColormap(["gold", "lawngreen"]),
+                cmap=colors.ListedColormap(["darkorange", "lightseagreen"]),
                 norm=colors.CenteredNorm(), linewidths=0.001)
 plt.xlabel('x')
 plt.ylabel('y')
