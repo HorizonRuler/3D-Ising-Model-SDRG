@@ -15,10 +15,10 @@ const double COUPLING_NOISE_STANDARD_DEVIATION = 0.0000000001;
 const int LONGITUDINAL_FIELD_MEAN = 0;
 
 // parameters for simulation
-const int LATTICE_SIDE_LENGTH = 64;
-const double LONGITUDINAL_FIELD_STARTING_STANDARD_DEVIATION = 2;
+const int LATTICE_SIDE_LENGTH = 16;
+const double LONGITUDINAL_FIELD_STARTING_STANDARD_DEVIATION = 0.01;
 const double STEP_SIZE = 0.01;
-const int REPETITIONS = 100;
+const int REPETITIONS = 30;
 const int NUM_STEPS = 100;
 
 // inheritance structure for priority queue
@@ -54,22 +54,17 @@ struct EdgeHash {
 
 // 3D adjacency list for each node pointing to nodes and edges in priority queue, put outside of main to avoid stack overflow
 auto parameter_compare = [] (Parameter *a, Parameter *b) {return fabs(a->strength) < fabs(b->strength);};
-pair<Node*, unordered_set<Edge*, EdgeHash> > adjacency_list[LATTICE_SIDE_LENGTH][LATTICE_SIDE_LENGTH][LATTICE_SIDE_LENGTH];
+pair<Node*, unordered_set<Edge*, EdgeHash> > adjacency_list[LATTICE_SIDE_LENGTH][LATTICE_SIDE_LENGTH][LATTICE_SIDE_LENGTH * 2];
 priority_queue<Parameter*, vector<Parameter*>, decltype(parameter_compare)> parameters(parameter_compare);
-// double final_domains[LATTICE_SIDE_LENGTH][LATTICE_SIDE_LENGTH][LATTICE_SIDE_LENGTH];
+double final_domains[LATTICE_SIDE_LENGTH][LATTICE_SIDE_LENGTH][2 * LATTICE_SIDE_LENGTH];
 
-double simulate_SDRG(double LONGITUDINAL_FIELD_STANDARD_DEVIATION) {
-    // file output
-    // std::string decimation_steps_filename = "first_order_SDRG_steps_" + std::to_string(LONGITUDINAL_FIELD_STANDARD_DEVIATION) + ".txt";
-    // FILE *decimation_steps_file = fopen(decimation_steps_filename.c_str(), "w");
+bool simulate_SDRG(double LONGITUDINAL_FIELD_STANDARD_DEVIATION, unsigned seed) {
 
-    // std::string final_domains_filename = "first_order_SDRG_domains_" + std::to_string(LONGITUDINAL_FIELD_STANDARD_DEVIATION) + "csv";
-    // FILE *final_domains_file = fopen(final_domains_filename.c_str(), "w");
+    // https://cplusplus.com/reference/random/mt19937_64/
+    mt19937_64 generator(seed);
 
 	// generate the network randomly using gaussian distribution for fields centered at 0
-    unsigned seed = chrono::system_clock::now().time_since_epoch().count();
-    default_random_engine generator(seed);
-    normal_distribution<double> fields(LONGITUDINAL_FIELD_MEAN, LONGITUDINAL_FIELD_STANDARD_DEVIATION);
+    normal_distribution<double> fields(LONGITUDINAL_FIELD_MEAN, 1);
     normal_distribution<double> couplings(COUPLING_STRENGTH, COUPLING_NOISE_STANDARD_DEVIATION);
 
     // initialize priority queue and adjacency list
@@ -78,17 +73,22 @@ double simulate_SDRG(double LONGITUDINAL_FIELD_STANDARD_DEVIATION) {
     cout << "Initializing network" << endl;
     for (int i = 0; i < LATTICE_SIDE_LENGTH; i++) {
         for (int j = 0; j < LATTICE_SIDE_LENGTH; j++) {
-            for (int k = 0; k < LATTICE_SIDE_LENGTH; k++) {
+            for (int k = 0; k < LATTICE_SIDE_LENGTH * 2; k++) {
                 // nodes first
-                Node *n = new Node(fields(generator), i, j, k);
+                Node *n = new Node(fields(generator) * LONGITUDINAL_FIELD_STANDARD_DEVIATION, i, j, k);
                 parameters.push(n);
                 adjacency_list[i][j][k].first = n;
                 n->domain.push_back(*n);
 
+                // want to make two cubes with periodic boundary conditions on k axis and connecting top to bottom on the remaining axes
+                int k2 = k;
+                if (j == LATTICE_SIDE_LENGTH - 1 || i == LATTICE_SIDE_LENGTH - 1)
+                    k2 = (k + LATTICE_SIDE_LENGTH) % (LATTICE_SIDE_LENGTH * 2);
+
                 // mod to accound for periodic boundary conditions
-                Edge *e1 = new Edge(couplings(generator), i, j, k, i, j, (k + 1) % LATTICE_SIDE_LENGTH);
-                Edge *e2 = new Edge(couplings(generator), i, j, k, i, (j + 1) % LATTICE_SIDE_LENGTH, k);
-                Edge *e3 = new Edge(couplings(generator), i, j, k, (i + 1) % LATTICE_SIDE_LENGTH, j, k);
+                Edge *e1 = new Edge(couplings(generator), i, j, k, i, j, (k + 1) % (LATTICE_SIDE_LENGTH * 2));
+                Edge *e2 = new Edge(couplings(generator), i, j, k, i, (j + 1) % LATTICE_SIDE_LENGTH, k2);
+                Edge *e3 = new Edge(couplings(generator), i, j, k, (i + 1) % LATTICE_SIDE_LENGTH, j, k2);
                 parameters.push(e1);
                 parameters.push(e2);
                 parameters.push(e3);
@@ -97,34 +97,22 @@ double simulate_SDRG(double LONGITUDINAL_FIELD_STANDARD_DEVIATION) {
                 adjacency_list[i][j][k].second.insert(e1);
                 adjacency_list[i][j][k].second.insert(e2);
                 adjacency_list[i][j][k].second.insert(e3);
-                adjacency_list[i][j][(k + 1) % LATTICE_SIDE_LENGTH].second.insert(e1);
-                adjacency_list[i][(j + 1) % LATTICE_SIDE_LENGTH][k].second.insert(e2);
-                adjacency_list[(i + 1) % LATTICE_SIDE_LENGTH][j][k].second.insert(e3);
+                adjacency_list[i][j][(k + 1) % (LATTICE_SIDE_LENGTH * 2)].second.insert(e1);
+                adjacency_list[i][(j + 1) % LATTICE_SIDE_LENGTH][k2].second.insert(e2);
+                adjacency_list[(i + 1) % LATTICE_SIDE_LENGTH][j][k2].second.insert(e3);
             }
         }
     }
     cout << "Running rules" << endl;
     
     // first order rules
-    int imbalanced_field_count = 0;
     while(!parameters.empty()) {
         if (parameters.top()->valid != false) {
             if (parameters.top()->type == "Node") {
                 // node decimation, print to file
                 Node *n = (Node*) parameters.top();
-                // fprintf(decimation_steps_file, "Node strength %f: (%d, %d, %d)\n", n->strength, n->x1, n->y1, n->z1);
-                // fprintf(decimation_steps_file, "Original Nodes in domain:\n");
-                // for (Node m : n->domain) {
-                //     fprintf(decimation_steps_file, "Original strength %f: (%d, %d, %d)\n", m.strength, m.x1, m.y1, m.z1);
-                //     final_domains[m.x1][m.y1][m.z1] = n->strength;
-                // }
-                // fprintf(decimation_steps_file, "\n");
-
-                // increment or decrement imbalanced field count by number of spins in domain
-                if (n->strength > 0)
-                    imbalanced_field_count += n->domain.size();
-                else
-                    imbalanced_field_count -= n->domain.size();
+                for (Node m : n->domain)
+                    final_domains[m.x1][m.y1][m.z1] = n->strength;
 
                 vector<Node*> nodes_to_copy;
                 int node_sign = (adjacency_list[n->x1][n->y1][n->z1].first->strength > 0) - (adjacency_list[n->x1][n->y1][n->z1].first->strength < 0);
@@ -165,7 +153,6 @@ double simulate_SDRG(double LONGITUDINAL_FIELD_STANDARD_DEVIATION) {
             } else {
                 // edge decimation, print to file
                 Edge *e = (Edge*) parameters.top();
-                // fprintf(decimation_steps_file, "Edge strength %f: (%d, %d, %d) <-> (%d, %d, %d)\n", e->strength, e->x1, e->y1, e->z1, e->x2, e->y2, e->z2);
 
                 // new node with combined strength
                 Node *n = new Node(adjacency_list[e->x1][e->y1][e->z1].first->strength + adjacency_list[e->x2][e->y2][e->z2].first->strength, e->x1, e->y1, e->z1);
@@ -249,44 +236,49 @@ double simulate_SDRG(double LONGITUDINAL_FIELD_STANDARD_DEVIATION) {
         }
     }
 
-    // // print final domains to file
-    // for (int i = 0; i < LATTICE_SIDE_LENGTH; i++) {
-    //     for (int j = 0; j < LATTICE_SIDE_LENGTH; j++) {
-    //         fprintf(final_domains_file, "%f", final_domains[i][j][0]);
-    //         for (int k = 0; k < LATTICE_SIDE_LENGTH; k++) {
-    //             fprintf(final_domains_file, ", %f", final_domains[i][j][k]);
-    //         }
-    //         fprintf(final_domains_file, "\n");
-    //     }
-    // }
+    bool connected = false;
+    for (int i = 0; i < LATTICE_SIDE_LENGTH; i++) {
+        for (int j = 0; j < LATTICE_SIDE_LENGTH; j++) {
+            for (int k = 0; k < LATTICE_SIDE_LENGTH; k++) {
+                if (final_domains[i][j][k] == final_domains[i][j][(k + LATTICE_SIDE_LENGTH) % (LATTICE_SIDE_LENGTH * 2)]) {
+                    connected = true;
+                    break;
+                }
+            }
+        }
+    }
 
-    // // close files
-    // fclose(final_domains_file);
-    // fclose(decimation_steps_file);
-
-    return abs((double) imbalanced_field_count / (LATTICE_SIDE_LENGTH * LATTICE_SIDE_LENGTH * LATTICE_SIDE_LENGTH));
+    return connected;
 }
 
 int main() {
     // open file for output
-    FILE *magnetization_moment_file = fopen("first_order_SDRG_magnetization_moment.txt", "w");
+    FILE *pseudocritical_point_file = fopen("first_order_SDRG_pseudocritical_point.txt", "w");
 
-    if (magnetization_moment_file == NULL) {
+    if (pseudocritical_point_file == NULL) {
         printf("Error opening file!\n");
         return 1;
     }
 
     // run SDRG for each step
-    for (int i = 0; i <= NUM_STEPS; i++) {
-        double total_magnetization_moment = 0;
-        cout << "Step " << i << endl;
-        for (int j = 0; j < REPETITIONS; j++) {
-            total_magnetization_moment += simulate_SDRG(LONGITUDINAL_FIELD_STARTING_STANDARD_DEVIATION + i * STEP_SIZE);
+    for (int i = 0; i < REPETITIONS; i++) {
+        cout << "Repetition " << i + 1 << endl;
+
+        // same seed to ensure same network for each step
+        unsigned seed = chrono::system_clock::now().time_since_epoch().count();
+
+        // assume network starts connected at low fields
+        bool last_connected = true;
+        for (int j = 0; j <= NUM_STEPS; j++) {
+            bool current_connected = simulate_SDRG(LONGITUDINAL_FIELD_STARTING_STANDARD_DEVIATION + j * STEP_SIZE, seed);
+            if (current_connected ^ last_connected) {
+                fprintf(pseudocritical_point_file, "Repetition %d pseudocritical point: h = %f\n", i + 1, LONGITUDINAL_FIELD_STARTING_STANDARD_DEVIATION + j * STEP_SIZE);
+            }
+            last_connected = current_connected;
         }
-        fprintf(magnetization_moment_file, "h st. dev. %f : average moment %f\n", LONGITUDINAL_FIELD_STARTING_STANDARD_DEVIATION + i * STEP_SIZE, total_magnetization_moment / REPETITIONS);
     }
 
     // close file
-    fclose(magnetization_moment_file);
+    fclose(pseudocritical_point_file);
     return 0;
 }
