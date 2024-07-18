@@ -1,0 +1,2 @@
+Repetition 1 pseudocritical point: h = 1.050000
+Repetition 1 pseudocritical point: h = 1.090000

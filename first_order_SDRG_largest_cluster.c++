@@ -8,18 +8,17 @@
 #include <math.h>
 #include <string>
 #include <iostream>
-// #include <omp.h>
 using namespace std;
 const int COUPLING_STRENGTH = 1;
 const double COUPLING_NOISE_STANDARD_DEVIATION = 0.0000000001;
 const int LONGITUDINAL_FIELD_MEAN = 0;
 
 // parameters for simulation
-const int LATTICE_SIDE_LENGTH = 32;
-const double LONGITUDINAL_FIELD_STARTING_STANDARD_DEVIATION = 1.05;
-const double STEP_SIZE = 0.01;
+const int LATTICE_SIDE_LENGTH = 16;
+const double LONGITUDINAL_FIELD_STARTING_STANDARD_DEVIATION = 0.0625;
+const double STEP_SIZE = 1;
 const int REPETITIONS = 1;
-const int NUM_STEPS = 5;
+const int NUM_STEPS = 0;
 
 // inheritance structure for priority queue
 struct Parameter {
@@ -54,41 +53,36 @@ struct EdgeHash {
 
 // 3D adjacency list for each node pointing to nodes and edges in priority queue, put outside of main to avoid stack overflow
 auto parameter_compare = [] (Parameter *a, Parameter *b) {return fabs(a->strength) < fabs(b->strength);};
-pair<Node*, unordered_set<Edge*, EdgeHash> > adjacency_list[LATTICE_SIDE_LENGTH][LATTICE_SIDE_LENGTH][LATTICE_SIDE_LENGTH * 2];
+pair<Node*, unordered_set<Edge*, EdgeHash> > adjacency_list[LATTICE_SIDE_LENGTH][LATTICE_SIDE_LENGTH][LATTICE_SIDE_LENGTH];
 priority_queue<Parameter*, vector<Parameter*>, decltype(parameter_compare)> parameters(parameter_compare);
-double final_domains[LATTICE_SIDE_LENGTH][LATTICE_SIDE_LENGTH][2 * LATTICE_SIDE_LENGTH];
+bool final_domains[LATTICE_SIDE_LENGTH][LATTICE_SIDE_LENGTH][LATTICE_SIDE_LENGTH];
 
-bool simulate_SDRG(double LONGITUDINAL_FIELD_STANDARD_DEVIATION, unsigned seed) {
-
-    // https://cplusplus.com/reference/random/mt19937_64/
-    mt19937_64 generator(seed);
+double simulate_SDRG(double LONGITUDINAL_FIELD_STANDARD_DEVIATION) {
+    // file output
+    string largest_cluster_filename = "first_order_SDRG_largest_cluster_" + to_string(LONGITUDINAL_FIELD_STANDARD_DEVIATION) + ".csv";
+    FILE *final_domains_file = fopen(largest_cluster_filename.c_str(), "w");
 
 	// generate the network randomly using gaussian distribution for fields centered at 0
-    normal_distribution<double> fields(LONGITUDINAL_FIELD_MEAN, 1);
+    unsigned seed = chrono::system_clock::now().time_since_epoch().count();
+    default_random_engine generator(seed);
+    normal_distribution<double> fields(LONGITUDINAL_FIELD_MEAN, LONGITUDINAL_FIELD_STANDARD_DEVIATION);
     normal_distribution<double> couplings(COUPLING_STRENGTH, COUPLING_NOISE_STANDARD_DEVIATION);
 
     // initialize priority queue and adjacency list
-    // omp_set_num_threads(4);
-    // #pragma omp parallel for 
     cout << "Initializing network" << endl;
     for (int i = 0; i < LATTICE_SIDE_LENGTH; i++) {
         for (int j = 0; j < LATTICE_SIDE_LENGTH; j++) {
-            for (int k = 0; k < LATTICE_SIDE_LENGTH * 2; k++) {
+            for (int k = 0; k < LATTICE_SIDE_LENGTH; k++) {
                 // nodes first
-                Node *n = new Node(fields(generator) * LONGITUDINAL_FIELD_STANDARD_DEVIATION, i, j, k);
+                Node *n = new Node(fields(generator), i, j, k);
                 parameters.push(n);
                 adjacency_list[i][j][k].first = n;
                 n->domain.push_back(*n);
 
-                // want to make two cubes with periodic boundary conditions on k axis and connecting top to bottom on the remaining axes
-                int k2 = k;
-                if (j == LATTICE_SIDE_LENGTH - 1 || i == LATTICE_SIDE_LENGTH - 1)
-                    k2 = (k + LATTICE_SIDE_LENGTH) % (LATTICE_SIDE_LENGTH * 2);
-
                 // mod to accound for periodic boundary conditions
-                Edge *e1 = new Edge(couplings(generator), i, j, k, i, j, (k + 1) % (LATTICE_SIDE_LENGTH * 2));
-                Edge *e2 = new Edge(couplings(generator), i, j, k, i, (j + 1) % LATTICE_SIDE_LENGTH, k2);
-                Edge *e3 = new Edge(couplings(generator), i, j, k, (i + 1) % LATTICE_SIDE_LENGTH, j, k2);
+                Edge *e1 = new Edge(couplings(generator), i, j, k, i, j, (k + 1) % LATTICE_SIDE_LENGTH);
+                Edge *e2 = new Edge(couplings(generator), i, j, k, i, (j + 1) % LATTICE_SIDE_LENGTH, k);
+                Edge *e3 = new Edge(couplings(generator), i, j, k, (i + 1) % LATTICE_SIDE_LENGTH, j, k);
                 parameters.push(e1);
                 parameters.push(e2);
                 parameters.push(e3);
@@ -97,22 +91,25 @@ bool simulate_SDRG(double LONGITUDINAL_FIELD_STANDARD_DEVIATION, unsigned seed) 
                 adjacency_list[i][j][k].second.insert(e1);
                 adjacency_list[i][j][k].second.insert(e2);
                 adjacency_list[i][j][k].second.insert(e3);
-                adjacency_list[i][j][(k + 1) % (LATTICE_SIDE_LENGTH * 2)].second.insert(e1);
-                adjacency_list[i][(j + 1) % LATTICE_SIDE_LENGTH][k2].second.insert(e2);
-                adjacency_list[(i + 1) % LATTICE_SIDE_LENGTH][j][k2].second.insert(e3);
+                adjacency_list[i][j][(k + 1) % LATTICE_SIDE_LENGTH].second.insert(e1);
+                adjacency_list[i][(j + 1) % LATTICE_SIDE_LENGTH][k].second.insert(e2);
+                adjacency_list[(i + 1) % LATTICE_SIDE_LENGTH][j][k].second.insert(e3);
             }
         }
     }
     cout << "Running rules" << endl;
     
     // first order rules
+    vector<Node> largest_cluster; 
     while(!parameters.empty()) {
         if (parameters.top()->valid != false) {
             if (parameters.top()->type == "Node") {
                 // node decimation, print to file
                 Node *n = (Node*) parameters.top();
-                for (Node m : n->domain)
-                    final_domains[m.x1][m.y1][m.z1] = n->strength;
+
+                // increment or decrement imbalanced field count by number of spins in domain
+                if (n->domain.size() > largest_cluster.size())
+                    largest_cluster = n->domain;
 
                 vector<Node*> nodes_to_copy;
                 int node_sign = (adjacency_list[n->x1][n->y1][n->z1].first->strength > 0) - (adjacency_list[n->x1][n->y1][n->z1].first->strength < 0);
@@ -236,47 +233,34 @@ bool simulate_SDRG(double LONGITUDINAL_FIELD_STANDARD_DEVIATION, unsigned seed) 
         }
     }
 
+    // print largest cluster to file
+    for (Node m : largest_cluster)
+        final_domains[m.x1][m.y1][m.z1] = true;
     for (int i = 0; i < LATTICE_SIDE_LENGTH; i++) {
         for (int j = 0; j < LATTICE_SIDE_LENGTH; j++) {
-            for (int k = 0; k < LATTICE_SIDE_LENGTH; k++) {
-                if (final_domains[i][j][k] == final_domains[i][j][(k + LATTICE_SIDE_LENGTH) % (LATTICE_SIDE_LENGTH * 2)]) {
-                    return true;
-                }
+            fprintf(final_domains_file, "%d", final_domains[i][j][0]);
+            final_domains[i][j][0] = false;
+            for (int k = 1; k < LATTICE_SIDE_LENGTH; k++) {
+                fprintf(final_domains_file, ", %d", final_domains[i][j][k]);
+                final_domains[i][j][k] = false;
             }
+            fprintf(final_domains_file, "\n");
         }
     }
 
-    return false;
+    // close files
+    fclose(final_domains_file);
+
+    return 0;
 }
 
 int main() {
-    // open file for output
-    FILE *pseudocritical_point_file = fopen("first_order_SDRG_pseudocritical_point.txt", "w");
-
-    if (pseudocritical_point_file == NULL) {
-        printf("Error opening file!\n");
-        return 1;
-    }
-
     // run SDRG for each step
-    for (int i = 0; i < REPETITIONS; i++) {
-        cout << "Repetition " << i + 1 << endl;
-
-        // same seed to ensure same network for each step
-        unsigned seed = chrono::system_clock::now().time_since_epoch().count();
-
-        // assume network starts connected at low fields
-        bool last_connected = true;
-        for (int j = 0; j <= NUM_STEPS; j++) {
-            bool current_connected = simulate_SDRG(LONGITUDINAL_FIELD_STARTING_STANDARD_DEVIATION + j * STEP_SIZE, seed);
-            if (current_connected ^ last_connected) {
-                fprintf(pseudocritical_point_file, "Repetition %d pseudocritical point: h = %f\n", i + 1, LONGITUDINAL_FIELD_STARTING_STANDARD_DEVIATION + j * STEP_SIZE);
-            }
-            last_connected = current_connected;
+    for (int i = 0; i <= NUM_STEPS; i++) {
+        cout << "Step " << i << endl;
+        for (int j = 0; j < REPETITIONS; j++) {
+            simulate_SDRG(LONGITUDINAL_FIELD_STARTING_STANDARD_DEVIATION + i * STEP_SIZE);
         }
     }
-
-    // close file
-    fclose(pseudocritical_point_file);
     return 0;
 }

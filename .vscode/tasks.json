@@ -5,7 +5,7 @@
             "label": "C/C++: clang++ build active file",
             "command": "/usr/bin/clang++",
             "args": [
-                "-O3",
+                "-O0",
                 "-march=native",
                 "-openmp",
                 "-Wall",

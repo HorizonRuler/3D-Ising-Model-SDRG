@@ -15,11 +15,11 @@ const double COUPLING_NOISE_STANDARD_DEVIATION = 0.0000000001;
 const int LONGITUDINAL_FIELD_MEAN = 0;
 
 // parameters for simulation
-const int LATTICE_SIDE_LENGTH = 64;
-const double LONGITUDINAL_FIELD_STARTING_STANDARD_DEVIATION = 2;
+const int LATTICE_SIDE_LENGTH = 16;
+const double LONGITUDINAL_FIELD_STARTING_STANDARD_DEVIATION = 0.01;
 const double STEP_SIZE = 0.01;
 const int REPETITIONS = 100;
-const int NUM_STEPS = 100;
+const int NUM_STEPS = 149;
 
 // inheritance structure for priority queue
 struct Parameter {
@@ -57,6 +57,7 @@ auto parameter_compare = [] (Parameter *a, Parameter *b) {return fabs(a->strengt
 pair<Node*, unordered_set<Edge*, EdgeHash> > adjacency_list[LATTICE_SIDE_LENGTH][LATTICE_SIDE_LENGTH][LATTICE_SIDE_LENGTH];
 priority_queue<Parameter*, vector<Parameter*>, decltype(parameter_compare)> parameters(parameter_compare);
 // double final_domains[LATTICE_SIDE_LENGTH][LATTICE_SIDE_LENGTH][LATTICE_SIDE_LENGTH];
+int largest_cluster = 0;
 
 double simulate_SDRG(double LONGITUDINAL_FIELD_STANDARD_DEVIATION) {
     // file output
@@ -125,6 +126,8 @@ double simulate_SDRG(double LONGITUDINAL_FIELD_STANDARD_DEVIATION) {
                     imbalanced_field_count += n->domain.size();
                 else
                     imbalanced_field_count -= n->domain.size();
+                if (n->domain.size() > largest_cluster)
+                    largest_cluster = n->domain.size();
 
                 vector<Node*> nodes_to_copy;
                 int node_sign = (adjacency_list[n->x1][n->y1][n->z1].first->strength > 0) - (adjacency_list[n->x1][n->y1][n->z1].first->strength < 0);
@@ -280,10 +283,11 @@ int main() {
     for (int i = 0; i <= NUM_STEPS; i++) {
         double total_magnetization_moment = 0;
         cout << "Step " << i << endl;
+        largest_cluster = 0;
         for (int j = 0; j < REPETITIONS; j++) {
             total_magnetization_moment += simulate_SDRG(LONGITUDINAL_FIELD_STARTING_STANDARD_DEVIATION + i * STEP_SIZE);
         }
-        fprintf(magnetization_moment_file, "h st. dev. %f : average moment %f\n", LONGITUDINAL_FIELD_STARTING_STANDARD_DEVIATION + i * STEP_SIZE, total_magnetization_moment / REPETITIONS);
+        fprintf(magnetization_moment_file, "h st. dev. %f : average moment %f : largest cluster %d\n", LONGITUDINAL_FIELD_STARTING_STANDARD_DEVIATION + i * STEP_SIZE, total_magnetization_moment / REPETITIONS, largest_cluster);
     }
 
     // close file
