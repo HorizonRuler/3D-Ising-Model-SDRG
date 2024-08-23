@@ -15,11 +15,11 @@ const double COUPLING_NOISE_STANDARD_DEVIATION = 0.0000000001;
 const int LONGITUDINAL_FIELD_MEAN = 0;
 
 // parameters for simulation
-const int LATTICE_SIDE_LENGTH = 16;
-const double LONGITUDINAL_FIELD_STARTING_STANDARD_DEVIATION = 0.01;
+const int LATTICE_SIDE_LENGTH = 8;
+const double LONGITUDINAL_FIELD_STARTING_STANDARD_DEVIATION = 0.6;
 const double STEP_SIZE = 0.01;
-const int REPETITIONS = 100;
-const int NUM_STEPS = 149;
+const int REPETITIONS = 1000;
+const int NUM_STEPS = 0;
 
 // inheritance structure for priority queue
 struct Parameter {
@@ -57,7 +57,7 @@ auto parameter_compare = [] (Parameter *a, Parameter *b) {return fabs(a->strengt
 pair<Node*, unordered_set<Edge*, EdgeHash> > adjacency_list[LATTICE_SIDE_LENGTH][LATTICE_SIDE_LENGTH][LATTICE_SIDE_LENGTH];
 priority_queue<Parameter*, vector<Parameter*>, decltype(parameter_compare)> parameters(parameter_compare);
 // double final_domains[LATTICE_SIDE_LENGTH][LATTICE_SIDE_LENGTH][LATTICE_SIDE_LENGTH];
-int largest_cluster = 0;
+int total_largest_clusters = 0;
 
 double simulate_SDRG(double LONGITUDINAL_FIELD_STANDARD_DEVIATION) {
     // file output
@@ -107,7 +107,7 @@ double simulate_SDRG(double LONGITUDINAL_FIELD_STANDARD_DEVIATION) {
     cout << "Running rules" << endl;
     
     // first order rules
-    int imbalanced_field_count = 0;
+    int imbalanced_field_count = 0, largest_cluster = 0;
     while(!parameters.empty()) {
         if (parameters.top()->valid != false) {
             if (parameters.top()->type == "Node") {
@@ -267,12 +267,13 @@ double simulate_SDRG(double LONGITUDINAL_FIELD_STANDARD_DEVIATION) {
     // fclose(final_domains_file);
     // fclose(decimation_steps_file);
 
+    total_largest_clusters += largest_cluster;
     return abs((double) imbalanced_field_count / (LATTICE_SIDE_LENGTH * LATTICE_SIDE_LENGTH * LATTICE_SIDE_LENGTH));
 }
 
 int main() {
     // open file for output
-    FILE *magnetization_moment_file = fopen("first_order_SDRG_magnetization_moment.txt", "w");
+    FILE *magnetization_moment_file = fopen("first_order_SDRG_magnetization_moment.txt", "a");
 
     if (magnetization_moment_file == NULL) {
         printf("Error opening file!\n");
@@ -283,11 +284,11 @@ int main() {
     for (int i = 0; i <= NUM_STEPS; i++) {
         double total_magnetization_moment = 0;
         cout << "Step " << i << endl;
-        largest_cluster = 0;
+        total_largest_clusters = 0;
         for (int j = 0; j < REPETITIONS; j++) {
             total_magnetization_moment += simulate_SDRG(LONGITUDINAL_FIELD_STARTING_STANDARD_DEVIATION + i * STEP_SIZE);
         }
-        fprintf(magnetization_moment_file, "h st. dev. %f : average moment %f : largest cluster %d\n", LONGITUDINAL_FIELD_STARTING_STANDARD_DEVIATION + i * STEP_SIZE, total_magnetization_moment / REPETITIONS, largest_cluster);
+        fprintf(magnetization_moment_file, "h st. dev. %f : average moment %f : average largest cluster %d\n", LONGITUDINAL_FIELD_STARTING_STANDARD_DEVIATION + i * STEP_SIZE, total_magnetization_moment / REPETITIONS, total_largest_clusters / REPETITIONS);
     }
 
     // close file

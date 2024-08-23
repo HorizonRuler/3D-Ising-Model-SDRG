@@ -20,7 +20,7 @@ neighboring locations with the same value in the 3D array should have the same c
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
-FILE_NAME = 'first_order_SDRG_largest_cluster_0.062500'
+FILE_NAME = 'first_order_SDRG_largest_cluster_1.500000'
 
 # Read data from file
 with open(FILE_NAME + '.csv') as file:
@@ -45,7 +45,7 @@ x, y, z = np.meshgrid(range(L), range(L), range(L))
 fig = plt.figure()
 ax = fig.add_subplot(projection='3d')
 sc = ax.scatter(x, y, z, c=data.flatten(), marker='.',
-                cmap=colors.ListedColormap(["white", "darkorange"]),
+                cmap=colors.ListedColormap([(0,0,0,0), "darkorange"]),
                 norm=colors.CenteredNorm(vcenter=.5), linewidths=0.001)
 plt.xlabel('x')
 plt.ylabel('y')

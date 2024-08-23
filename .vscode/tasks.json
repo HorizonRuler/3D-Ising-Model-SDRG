@@ -5,9 +5,8 @@
             "label": "C/C++: clang++ build active file",
             "command": "/usr/bin/clang++",
             "args": [
-                "-O0",
+                "-O3",
                 "-march=native",
-                "-openmp",
                 "-Wall",
                 "-fcolor-diagnostics",
                 "-fansi-escape-codes",

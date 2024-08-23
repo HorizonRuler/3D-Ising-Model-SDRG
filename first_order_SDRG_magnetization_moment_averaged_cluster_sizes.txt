@@ -1,0 +1,16 @@
+h st. dev. 0.010000 : average moment 1.000000 : largest cluster 512
+h st. dev. 0.120000 : average moment 1.000000 : largest cluster 46
+h st. dev. 0.130000 : average moment 1.000000 : largest cluster 37
+h st. dev. 0.140000 : average moment 1.000000 : largest cluster 30
+h st. dev. 0.150000 : average moment 1.000000 : largest cluster 24
+h st. dev. 0.410000 : average moment 0.999133 : largest cluster 1
+h st. dev. 0.420000 : average moment 0.999020 : largest cluster 1
+h st. dev. 0.510000 : average moment 0.995945 : largest cluster 1
+h st. dev. 1.010000 : average moment 0.873957 : largest cluster 1
+h st. dev. 1.000000 : average moment 0.880566 : largest cluster 1
+h st. dev. 1.100000 : average moment 0.810520 : largest cluster 1
+h st. dev. 1.200000 : average moment 0.726320 : largest cluster 2
+h st. dev. 1.300000 : average moment 0.663496 : largest cluster 2
+h st. dev. 1.400000 : average moment 0.588562 : largest cluster 3
+h st. dev. 1.500000 : average moment 0.519250 : largest cluster 3
+h st. dev. 1.510000 : average moment 0.530008 : largest cluster 3
