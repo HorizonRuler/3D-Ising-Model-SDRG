@@ -3,7 +3,7 @@
         {
             "type": "cppbuild",
             "label": "C/C++: clang++ build active file",
-            "command": "/usr/bin/clang++",
+            "command": "clang++",
             "args": [
                 "-O3",
                 "-march=native",
@@ -11,6 +11,7 @@
                 "-fcolor-diagnostics",
                 "-fansi-escape-codes",
                 "-fsanitize=address",
+                "-fopenmp",
                 "-g",
                 "${file}",
                 "-o",

@@ -8,18 +8,18 @@
 #include <math.h>
 #include <string>
 #include <iostream>
-// #include <omp.h>
+#include <omp.h>
 using namespace std;
 const int COUPLING_STRENGTH = 1;
 const double COUPLING_NOISE_STANDARD_DEVIATION = 0.0000000001;
 const int LONGITUDINAL_FIELD_MEAN = 0;
 
 // parameters for simulation
-const int LATTICE_SIDE_LENGTH = 8;
-const double LONGITUDINAL_FIELD_STARTING_STANDARD_DEVIATION = 0.6;
+const int LATTICE_SIDE_LENGTH = 4;
+const double LONGITUDINAL_FIELD_STARTING_STANDARD_DEVIATION = 0.51;
 const double STEP_SIZE = 0.01;
 const int REPETITIONS = 1000;
-const int NUM_STEPS = 0;
+const int NUM_STEPS = 99;
 
 // inheritance structure for priority queue
 struct Parameter {
@@ -52,31 +52,29 @@ struct EdgeHash {
     }
 };
 
-// 3D adjacency list for each node pointing to nodes and edges in priority queue, put outside of main to avoid stack overflow
-auto parameter_compare = [] (Parameter *a, Parameter *b) {return fabs(a->strength) < fabs(b->strength);};
-pair<Node*, unordered_set<Edge*, EdgeHash> > adjacency_list[LATTICE_SIDE_LENGTH][LATTICE_SIDE_LENGTH][LATTICE_SIDE_LENGTH];
-priority_queue<Parameter*, vector<Parameter*>, decltype(parameter_compare)> parameters(parameter_compare);
-// double final_domains[LATTICE_SIDE_LENGTH][LATTICE_SIDE_LENGTH][LATTICE_SIDE_LENGTH];
-int total_largest_clusters = 0;
+// int total_largest_clusters = 0;
 
-double simulate_SDRG(double LONGITUDINAL_FIELD_STANDARD_DEVIATION) {
+double simulate_SDRG(double longitudinal_field_st_dev) {
+    // 3D adjacency list for each node pointing to nodes and edges in priority queue, put outside of main to avoid stack overflow
+    auto parameter_compare = [] (Parameter *a, Parameter *b) {return fabs(a->strength) < fabs(b->strength);};
+    pair<Node*, unordered_set<Edge*, EdgeHash> > adjacency_list[LATTICE_SIDE_LENGTH][LATTICE_SIDE_LENGTH][LATTICE_SIDE_LENGTH];
+    priority_queue<Parameter*, vector<Parameter*>, decltype(parameter_compare)> parameters(parameter_compare);
+    // double final_domains[LATTICE_SIDE_LENGTH][LATTICE_SIDE_LENGTH][LATTICE_SIDE_LENGTH];
+
     // file output
-    // std::string decimation_steps_filename = "first_order_SDRG_steps_" + std::to_string(LONGITUDINAL_FIELD_STANDARD_DEVIATION) + ".txt";
+    // std::string decimation_steps_filename = "first_order_SDRG_steps_" + std::to_string(longitudinal_field_st_dev) + ".txt";
     // FILE *decimation_steps_file = fopen(decimation_steps_filename.c_str(), "w");
 
-    // std::string final_domains_filename = "first_order_SDRG_domains_" + std::to_string(LONGITUDINAL_FIELD_STANDARD_DEVIATION) + "csv";
+    // std::string final_domains_filename = "first_order_SDRG_domains_" + std::to_string(longitudinal_field_st_dev) + "csv";
     // FILE *final_domains_file = fopen(final_domains_filename.c_str(), "w");
 
 	// generate the network randomly using gaussian distribution for fields centered at 0
     unsigned seed = chrono::system_clock::now().time_since_epoch().count();
     default_random_engine generator(seed);
-    normal_distribution<double> fields(LONGITUDINAL_FIELD_MEAN, LONGITUDINAL_FIELD_STANDARD_DEVIATION);
+    normal_distribution<double> fields(LONGITUDINAL_FIELD_MEAN, longitudinal_field_st_dev);
     normal_distribution<double> couplings(COUPLING_STRENGTH, COUPLING_NOISE_STANDARD_DEVIATION);
 
     // initialize priority queue and adjacency list
-    // omp_set_num_threads(4);
-    // #pragma omp parallel for 
-    cout << "Initializing network" << endl;
     for (int i = 0; i < LATTICE_SIDE_LENGTH; i++) {
         for (int j = 0; j < LATTICE_SIDE_LENGTH; j++) {
             for (int k = 0; k < LATTICE_SIDE_LENGTH; k++) {
@@ -104,7 +102,6 @@ double simulate_SDRG(double LONGITUDINAL_FIELD_STANDARD_DEVIATION) {
             }
         }
     }
-    cout << "Running rules" << endl;
     
     // first order rules
     int imbalanced_field_count = 0, largest_cluster = 0;
@@ -267,13 +264,13 @@ double simulate_SDRG(double LONGITUDINAL_FIELD_STANDARD_DEVIATION) {
     // fclose(final_domains_file);
     // fclose(decimation_steps_file);
 
-    total_largest_clusters += largest_cluster;
+    // total_largest_clusters += largest_cluster;
     return abs((double) imbalanced_field_count / (LATTICE_SIDE_LENGTH * LATTICE_SIDE_LENGTH * LATTICE_SIDE_LENGTH));
 }
 
 int main() {
     // open file for output
-    FILE *magnetization_moment_file = fopen("first_order_SDRG_magnetization_moment.txt", "a");
+    FILE *magnetization_moment_file = fopen("/projects/p32410/first_order_SDRG_magnetization_moment.txt", "w");
 
     if (magnetization_moment_file == NULL) {
         printf("Error opening file!\n");
@@ -282,13 +279,20 @@ int main() {
 
     // run SDRG for each step
     for (int i = 0; i <= NUM_STEPS; i++) {
-        double total_magnetization_moment = 0;
-        cout << "Step " << i << endl;
-        total_largest_clusters = 0;
-        for (int j = 0; j < REPETITIONS; j++) {
-            total_magnetization_moment += simulate_SDRG(LONGITUDINAL_FIELD_STARTING_STANDARD_DEVIATION + i * STEP_SIZE);
+        double total_magnetization_moment = 0, local_total;
+        #pragma omp parallel private(local_total) shared(total_magnetization_moment)
+        {
+            local_total = 0;
+            cout << "thread " << omp_get_thread_num() << "step " << i << endl;
+            // total_largest_clusters = 0;
+            #pragma omp for
+            for (int j = 0; j < REPETITIONS; j++) {
+                local_total += simulate_SDRG(LONGITUDINAL_FIELD_STARTING_STANDARD_DEVIATION + i * STEP_SIZE);
+            }
+            #pragma omp atomic
+            total_magnetization_moment += local_total;
         }
-        fprintf(magnetization_moment_file, "h st. dev. %f : average moment %f : average largest cluster %d\n", LONGITUDINAL_FIELD_STARTING_STANDARD_DEVIATION + i * STEP_SIZE, total_magnetization_moment / REPETITIONS, total_largest_clusters / REPETITIONS);
+        fprintf(magnetization_moment_file, "%f : %f\n", LONGITUDINAL_FIELD_STARTING_STANDARD_DEVIATION + i * STEP_SIZE, total_magnetization_moment / REPETITIONS);//: %d, total_largest_clusters / REPETITIONS);
     }
 
     // close file
